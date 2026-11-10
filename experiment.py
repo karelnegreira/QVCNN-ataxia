@@ -182,4 +182,11 @@ def train_model(name, model, train_loader, val_loader, test_loader, device, args
         writer = csv.DictWriter(handle, fieldnames=list(history[0]))
         writer.writeheader()
         writer.writerows(history)
-    
+    with(outdir / f"{name.lower()}_report.json").open("w") as handle:
+        json.dump(report, handle, indent=2)
+
+    np.savetxt(outdir / f"{name.lower()}_confusion.csv", matrix, fmt="%d", delimiter=",")
+    return {"name": name, "parameters": parameters, "train_seconds": train_seconds,
+            "accuracy": test["accuracy"], "macro_f1": test["macro_f1"],
+            "history": history, "matrix": matrix}
+
