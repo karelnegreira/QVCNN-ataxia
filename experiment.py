@@ -158,5 +158,28 @@ def train_model(name, model, train_loader, val_loader, test_loader, device, args
     train_seconds = time.perf_counter() - started
     model.load_state_dict(torch.load(best_path, map_location=device, weights_only=True))
     test = evaluate(model, test_loader, device, criterion)
-    report = classification_report()
+    report = classification_report(test["targets"], test["predictions"], 
+                                    labels=list(range(9)), target_names=labels, 
+                                    zero_division=0, output_dict=True)
+    matrix = confusion_matrix(test["targets"], test["predictions"], labels=list(range(9)))
+    parameters = sum(p.numel() for p in model.parameters())
+    console.print(Panel(f"[bold]{name}[/bold] | Accuracy: {test['accuracy']:.2%} | "
+                        f"Macro-F1: {test['macro_f1']:.4f} | Parameters: {parameters:,} | "
+                        f"Training: {train_seconds:.1f}s", title="Held-out test results"))
 
+    detail = Table(title=f"{name}: per-class test metrics")
+    for col in {"Class", "Precision", "Recall", "F1", "Support"}:
+        detail.add_column(col, justify="left" if col == "Class" else "right")
+    
+    for label in labels:
+        item = report[label]
+        detail.add_row(label, f"{item['precision']:.3f}", f"{item['recall']:.3f}", 
+                       f"{item['f1_score']:.3f}", str(int(item['support'])))
+        
+    console.print(detail)
+
+    with(outdir / f"{name.lower()}_history.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(history[0]))
+        writer.writeheader()
+        writer.writerows(history)
+    
