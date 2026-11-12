@@ -190,3 +190,55 @@ def train_model(name, model, train_loader, val_loader, test_loader, device, args
             "accuracy": test["accuracy"], "macro_f1": test["macro_f1"],
             "history": history, "matrix": matrix}
 
+
+def save_plots(results, labels, outdir):
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    for result in results:
+        epochs = [r["epoch"] for r in result["history"]]
+        axes[0].plot(epochs, [r["train_loss"] for r in result["history"]], marker="o", label=result["name"] + " train")
+        axes[0].plot(epochs, [r["val_loss"] for r in result["history"]], marker=".", linestyle="--", label=result["name"] + " validation")
+        axes[1].plot(epochs, [r["val_macro_f1"] for r in result["history"]], marker="o", label=result["name"])
+    axes[0].set(title="Training and validation loss", xlabel="Epoch", ylabel="Cross-entropy loss")
+    axes[1].set(title="Validation macro-F1", xlabel="Epoch", ylabel="Macro-F1", ylim=(0, 1.05))
+
+    for ax in axes:
+        ax.grid(alpha=0.25)
+        ax.legend()
+    fig.tight_layout()
+    fig.savefig(outdir / "training_curves.png", dpi=180)
+    plt.close(fig)
+
+    for result in results:
+        fig, ax = plt.subplots(figsize=(10, 8))
+        matrix = result["matrix"]
+        image = ax.imshow(matrix, cmap="Blues")
+        ax.set(title=f"{result['name']} confusion matrix", xlabel="Predicted class", ylabel="True class")
+        ax.set_xticks(range(9), labels=labels, rotation=60, ha="right")
+        ax.set_ysticks(range(9), labels=labels)
+        for i in range(9):
+            for j in range(9):
+                ax.text(j, i, str([i, j]), ha="center", va="center", color="white" 
+            if matrix[i, j] > matrix.max() / 2 else "black", fontsize=8 )
+        
+        fig.colorbar(image, ax=ax)
+        fig.tight_layout()
+        fig.savefig(outdir / f"{result['name'].lower()} confusion.png", dpi=180)
+        plt.close(fig)
+    
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    names = [r["name"] for r in results]
+    for ax, field, title in zip(axes, ("accurancy", "macro_f1", "parameters"), 
+                                ("Test accuracy", "Test macro-F1", "Trainable parameters")):
+        values = [r[field] for r in results]
+        bars = ax.bar(names, values)
+        ax.set_title(title)
+        ax.bar_label(bars, fmt="%.3f" if field != "parameters" else "%.0f")
+        if field != "parameters":
+            ax.set_ylim(0, 1.1)
+    
+    fig.tight_layout()
+    fig.savefig(outdir / "model_comparison.png", dpi=180)
+    plt.close(fig)
+
+def main():
+    
