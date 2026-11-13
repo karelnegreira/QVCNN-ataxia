@@ -241,4 +241,23 @@ def save_plots(results, labels, outdir):
     plt.close(fig)
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--epochs", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--max-train", type=int, default=None)
+    parser.add_argument("--max-val", type=int, default=None)
+    parser.add_argument("--max-test", type=int, default=None)
+    parser.add_argument("--output", type=Path, default=Path("result"))
+    args = parser.parse_args()
+    if args.epochs < 1 or args.batch_size < 1 or args.lr <= 0:
+        parser.error("epochs and batch-size should be possitive and lr > 0")
+    set_seed(args.seed)
+    args.output.mkdir(parents=True, exist_ok=True)
+    device = torch.device("cuda" if torch.cuda.is_available else "cpu")
+    labels = [INFO["pathmnist"]["label"][str(i)] for i in range(9)]
+    console.print(Panel.fit("[bold cyan]CNN vs Quaternion CNN[/bold cyan]\nPathMNIST research benchmark — not clinical", border_style="cyan"))
+    console.print(f"Device: [bold]{device}[/bold] | Seed: {args.seed} | Epochs: {args.epochs}")
+
     
