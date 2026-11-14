@@ -260,4 +260,35 @@ def main():
     console.print(Panel.fit("[bold cyan]CNN vs Quaternion CNN[/bold cyan]\nPathMNIST research benchmark — not clinical", border_style="cyan"))
     console.print(f"Device: [bold]{device}[/bold] | Seed: {args.seed} | Epochs: {args.epochs}")
 
-    
+    train = subset(FourChannelDataset("train"), args.max_train, args.seed)
+    val = subset(FourChannelDataset("val"), args.max_val, args.seed + 1)
+    test = subset(FourChannelDataset("test"), args.max_test, args.seed + 2)
+    console.print(f"Samples: train={len(train): } | validation={len(val): } | test={len(test): }")
+    train_loader = DataLoader(train, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val, batch_size=args.batch_size)
+    test_loader = DataLoader(test, batch_size=args.batch_size)
+
+    results = []
+    for name, quaternion in (("CNN", False), ("QCNN", True)):
+        set_seed(args.seed)
+        model = Classifier(quaternion=quaternion)
+        results.append(train_model(name, model, train_loader, val_loader, test_loader, 
+                                  device, args, args.output, labels))
+        
+        comparison = Table(title="Final comparison (held-out test)")
+        for col in ("Model", "Accuracy", "Macro-F1", "Parameters", "Training seconds"):
+            comparison.add_column(col)
+        for r in results:
+            comparison.add_row(r["name"], f"{r['accuracy']:.2%}", f"{r['macro_f1']:.4f}",
+                           f"{r['parameters']:,}", f"{r['train_seconds']:.1f}")
+        
+        console.print(comparison)
+        save_plots(results, labels, args.output)
+        with (args.output / "summary.json").open("w") as handle:
+            json.dump([{k: v for k, v in r.items() if k not in ("history", "matrix")} 
+                       for r in results], handle, indent=2)
+        
+        console.print(f"[green]Saved reports, charts, and checkpoints to {args.output.resolve()}[/green]")
+
+if __name__=="__main__":
+    main()
