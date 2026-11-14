@@ -12,7 +12,7 @@ from typing import Any
 
 import matplotlib
 matplotlib.use("Agg")
-import mathplotlib.pylot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from medmnist import INFO, PathMNIST
@@ -39,7 +39,7 @@ class FourChannelDataset(Dataset):
     def __getitem__(self, index):
         rgb, label = self.base[index]
         gray = (0.2989 * rgb[0:1] + 0.5870*rgb[1:2] + 0.1140 * rgb[2:3])
-        x = torch.x((rgb, gray), dim=0)
+        x = torch.cat((rgb, gray), dim=0)
         x = (x - 0.5) / 0.5
 
         return x, int(np.asarray(label).item())
@@ -110,12 +110,12 @@ def evaluate(model, loader, device, criterion):
             loss = criterion(logits, y)
             total_loss += loss.item() * y.size(0)
             total_count += y.size(0)
-            targets.extend(y.cpu().toList())
-            predictions.extend(logits.argmax(dim=1).cpu().toList())
+            targets.extend(y.cpu().tolist())
+            predictions.extend(logits.argmax(dim=1).cpu().tolist())
     
     return {
         "loss": total_loss / total_count,
-        "accurancy": accuracy_score(targets, predictions),
+        "accuracy": accuracy_score(targets, predictions),
         "macro_f1": f1_score(targets, predictions, labels=list(range(9)), average="macro", zero_division=0), 
         "targets": targets, 
         "predictions": predictions, 
@@ -146,7 +146,7 @@ def train_model(name, model, train_loader, val_loader, test_loader, device, args
                 count += y.size(0)
                 progress.advance(task)
         val = evaluate(model, val_loader, device, criterion)
-        row = {"epoch": epoch, "train_loss": total_loss / count, "val_loss": val["loss"], "val_accurancy": val["accurancy"], "val_macro_f1": val["macro_f1"]}
+        row = {"epoch": epoch, "train_loss": total_loss / count, "val_loss": val["loss"], "val_accuracy": val["accuracy"], "val_macro_f1": val["macro_f1"]}
         history.append(row)
         console.print(f"  [bold]{name}[/bold] train loss={row['train_loss']:.4f}  "
                       f"val loss={row['val_loss']:.4f}  val accuracy={row['val_accuracy']:.2%}  "
@@ -174,7 +174,7 @@ def train_model(name, model, train_loader, val_loader, test_loader, device, args
     for label in labels:
         item = report[label]
         detail.add_row(label, f"{item['precision']:.3f}", f"{item['recall']:.3f}", 
-                       f"{item['f1_score']:.3f}", str(int(item['support'])))
+                       f"{item['f1-score']:.3f}", str(int(item['support'])))
         
     console.print(detail)
 
@@ -214,7 +214,7 @@ def save_plots(results, labels, outdir):
         image = ax.imshow(matrix, cmap="Blues")
         ax.set(title=f"{result['name']} confusion matrix", xlabel="Predicted class", ylabel="True class")
         ax.set_xticks(range(9), labels=labels, rotation=60, ha="right")
-        ax.set_ysticks(range(9), labels=labels)
+        ax.set_yticks(range(9), labels=labels)
         for i in range(9):
             for j in range(9):
                 ax.text(j, i, str([i, j]), ha="center", va="center", color="white" 
@@ -227,7 +227,7 @@ def save_plots(results, labels, outdir):
     
     fig, axes = plt.subplots(1, 3, figsize=(12, 4))
     names = [r["name"] for r in results]
-    for ax, field, title in zip(axes, ("accurancy", "macro_f1", "parameters"), 
+    for ax, field, title in zip(axes, ("accuracy", "macro_f1", "parameters"), 
                                 ("Test accuracy", "Test macro-F1", "Trainable parameters")):
         values = [r[field] for r in results]
         bars = ax.bar(names, values)
@@ -255,7 +255,7 @@ def main():
         parser.error("epochs and batch-size should be possitive and lr > 0")
     set_seed(args.seed)
     args.output.mkdir(parents=True, exist_ok=True)
-    device = torch.device("cuda" if torch.cuda.is_available else "cpu")
+    device = torch.device("cpu")
     labels = [INFO["pathmnist"]["label"][str(i)] for i in range(9)]
     console.print(Panel.fit("[bold cyan]CNN vs Quaternion CNN[/bold cyan]\nPathMNIST research benchmark — not clinical", border_style="cyan"))
     console.print(f"Device: [bold]{device}[/bold] | Seed: {args.seed} | Epochs: {args.epochs}")

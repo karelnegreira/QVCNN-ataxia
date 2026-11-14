@@ -1,0 +1,16 @@
+[
+  {
+    "name": "CNN",
+    "parameters": 5529,
+    "train_seconds": 320.1532698170049,
+    "accuracy": 0.7742339832869081,
+    "macro_f1": 0.7201745134215677
+  },
+  {
+    "name": "QCNN",
+    "parameters": 1641,
+    "train_seconds": 634.469038413954,
+    "accuracy": 0.7396935933147633,
+    "macro_f1": 0.6699838495991741
+  }
+]
